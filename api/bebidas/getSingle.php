@@ -1,46 +1,78 @@
 <?php
+// API REST - Obter uma única bebida pelo ID
+// Método HTTP: GET
+// Parâmetro: idBebida (obrigatório)
 
+// Configurar headers CORS e Content-Type
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET");
 header("Access-Control-Allow-Headers: Access-Control-Allow-Headers,Content-Type,Access-Control-Allow-Methods, Authorization, X-Requested-With");
 header("Content-Type: application/json; charset=UTF-8");
- 
+
 // Incluir arquivos de banco de dados e modelo
 include_once '../../config/Database.php';
 include_once '../../models/Bebida.php';
- 
-// Instanciar o objeto Database e obter a conexão
-$database = new Database();
-$db = $database->getConnection();
- 
-// Instanciar o objeto Bebida
-$bebida = new Bebida($db);
 
-$bebida->idBebida = isset($_GET['idBebida']) ? $_GET['idBebida'] : null;
+try {
+    // Instanciar o objeto Database e obter a conexão
+    $database = new Database();
+    $db = $database->getConnection();
 
-// Verificar se um ID de bebida foi fornecido
-if ($bebida->idBebida) {
+    // Verificar se a conexão foi estabelecida
+    if (!$db) {
+        http_response_code(500);
+        echo json_encode(array(
+            "sucesso" => false,
+            "mensagem" => "Erro ao conectar ao banco de dados"
+        ), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
-    // Busca a bebida
-    $bebida->read_single();
+    // Instanciar o objeto Bebida
+    $bebida = new Bebida($db);
 
-    // Verificar se a bebida foi encontrada
-    if ($bebida->nome != null) {
-        // Criar array associativo para a bebida
+    // Validar e obter o ID da bebida
+    if (!isset($_GET['idBebida']) || empty($_GET['idBebida'])) {
+        http_response_code(400);
+        echo json_encode(array(
+            "sucesso" => false,
+            "mensagem" => "ID da bebida não fornecido"
+        ), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $bebida->idBebida = (int)$_GET['idBebida'];
+
+    // Buscar a bebida
+    if ($bebida->read_single()) {
+        // Bebida encontrada
         $bebida_arr = array(
-            "idBebida" => $bebida->idBebida,
-            "nome" => $bebida->nome,
-            "acoolica" => $bebida->acoolica,
-            "valor" => $bebida->valor
+            "sucesso" => true,
+            "dados" => array(
+                "idBebida" => (int)$bebida->idBebida,
+                "nome" => $bebida->nome,
+                "alcoolica" => (int)$bebida->alcoolica,
+                "valor" => (float)$bebida->valor
+            )
         );
 
-        // Retornar a bebida em formato JSON
-        echo json_encode($bebida_arr);
+        http_response_code(200);
+        echo json_encode($bebida_arr, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     } else {
-        // Retornar mensagem de erro se a bebida não for encontrada
-        echo json_encode(array("message" => "Bebida não encontrada."));
+        // Bebida não encontrada
+        http_response_code(404);
+        echo json_encode(array(
+            "sucesso" => false,
+            "mensagem" => "Bebida não encontrada"
+        ), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
-} else {
-    // Retornar mensagem de erro se o ID da bebida não for fornecido
-    echo json_encode(array("message" => "ID da bebida não fornecido."));
+} catch (Exception $e) {
+    // Tratamento de erro
+    http_response_code(500);
+    echo json_encode(array(
+        "sucesso" => false,
+        "mensagem" => "Erro ao buscar bebida",
+        "erro" => $e->getMessage()
+    ), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 }
+?>
