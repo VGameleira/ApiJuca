@@ -64,7 +64,7 @@ class Bebida{
 
         if ($row) {
             $this->nome = $row['nome'];
-            $this->acoolica = $row['acoolica'];
+            $this->alcoolica = $row['alcoolica'];
             $this->valor = $row['valor'];
             return true;
         }
